@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.db
+*_loot.txt
+.DS_Store
+.vscode/
