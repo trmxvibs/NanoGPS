@@ -1,7 +1,7 @@
 # 🌐 NanoGPS — Precision Tracker & Telemetry Profiler
 
 <p align="center">
-  <img src="https://img.shields.io/badge/NanoGPS-v1.3.0-00c853?style=for-the-badge&logo=target&logoColor=white" alt="NanoGPS Version">
+  <img src="https://img.shields.io/badge/NanoGPS-v1.0 0-00c853?style=for-the-badge&logo=target&logoColor=white" alt="NanoGPS Version">
   <img src="https://img.shields.io/badge/Status-Stable-00c853?style=for-the-badge" alt="Stable">
   <img src="https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/License-MIT-00c853?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="MIT License">
