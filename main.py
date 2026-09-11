@@ -33,8 +33,16 @@ def start_trapper():
     if not target_url:
         target_url = "https://google.com"
 
+    theme = input(f"{Colors.YELLOW}[?] Template Theme [dark/light/auto] (default: dark): {Colors.RESET}").strip().lower()
+    if theme not in ("dark", "light", "auto"):
+        theme = "dark"
+
+    accent = input(f"{Colors.YELLOW}[?] Custom Accent Hex (e.g., #22c55e, Enter to skip): {Colors.RESET}").strip()
+    if not accent:
+        accent = None
+
     port = get_free_port()
-    server = AuraServerManager.start_server(port, brand_name, target_url)
+    server = AuraServerManager.start_server(port, brand_name, target_url, theme=theme, accent=accent)
     
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
