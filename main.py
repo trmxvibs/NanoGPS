@@ -35,11 +35,17 @@ def start_trapper():
 
     port = get_free_port()
     server = AuraServerManager.start_server(port, brand_name, target_url)
-    
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
 
     print(f"{Colors.GREEN}[+] Local Server started on http://localhost:{port}{Colors.RESET}")
+    try:
+        from server import AuraHandler
+        if getattr(AuraHandler, "admin_enabled", False) and getattr(AuraHandler, "admin_token", None):
+            print(f"{Colors.CYAN}[+] Admin Dashboard: http://localhost:{port}/admin{Colors.RESET}")
+            print(f"{Colors.YELLOW}[+] Admin Token: {AuraHandler.admin_token}{Colors.RESET}")
+    except Exception:
+        pass
 
     # Start multi-tunnel selection with mandatory localhost view
     proc = TunnelManager.start_tunnel(port)
