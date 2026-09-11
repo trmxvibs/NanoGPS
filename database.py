@@ -52,3 +52,60 @@ class DatabaseManager:
             return rows
         except Exception:
             return []
+
+    @staticmethod
+    def fetch_recent_hits(limit=100, hit_type=None):
+        """Fetch recent hits as dicts for the admin JSON API."""
+        try:
+            limit = max(1, min(int(limit or 100), 500))
+        except (TypeError, ValueError):
+            limit = 100
+        allowed = ("GEOLOCATION", "DEEP_TELEMETRY")
+        try:
+            conn = sqlite3.connect(DatabaseManager.get_db_path())
+            cursor = conn.cursor()
+            if hit_type in allowed:
+                cursor.execute(
+                    "SELECT id, timestamp, ip, hit_type, payload, extra_info "
+                    "FROM hits WHERE hit_type = ? ORDER BY id DESC LIMIT ?",
+                    (hit_type, limit),
+                )
+            else:
+                cursor.execute(
+                    "SELECT id, timestamp, ip, hit_type, payload, extra_info "
+                    "FROM hits ORDER BY id DESC LIMIT ?",
+                    (limit,),
+                )
+            rows = cursor.fetchall()
+            conn.close()
+            return [
+                {
+                    "id": r[0],
+                    "timestamp": r[1],
+                    "ip": r[2],
+                    "hit_type": r[3],
+                    "payload": r[4],
+                    "extra_info": r[5],
+                }
+                for r in rows
+            ]
+        except Exception:
+            return []
+
+    @staticmethod
+    def get_hit_stats():
+        """Return {total, geo, telemetry} counts for the admin API."""
+        stats = {"total": 0, "geo": 0, "telemetry": 0}
+        try:
+            conn = sqlite3.connect(DatabaseManager.get_db_path())
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM hits")
+            stats["total"] = cursor.fetchone()[0] or 0
+            cursor.execute("SELECT COUNT(*) FROM hits WHERE hit_type = 'GEOLOCATION'")
+            stats["geo"] = cursor.fetchone()[0] or 0
+            cursor.execute("SELECT COUNT(*) FROM hits WHERE hit_type = 'DEEP_TELEMETRY'")
+            stats["telemetry"] = cursor.fetchone()[0] or 0
+            conn.close()
+        except Exception:
+            pass
+        return stats
